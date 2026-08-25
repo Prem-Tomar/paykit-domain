@@ -1,0 +1,7 @@
+[package]
+name = "paykit-domain"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+paykit-money = { path = "../paykit-money" }
