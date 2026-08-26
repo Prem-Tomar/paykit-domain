@@ -113,6 +113,65 @@ fn capture_before_authorization_is_rejected_and_state_is_unchanged() {
 }
 
 #[test]
+fn void_before_authorization_is_rejected_and_state_is_unchanged() {
+    let mut payment = payment();
+    let before = payment.clone();
+
+    let error = payment
+        .void()
+        .expect_err("created payment cannot be voided");
+
+    assert_eq!(
+        error,
+        PaymentTransitionError::InvalidTransition {
+            operation: PaymentOperation::Void,
+            current_status: PaymentStatus::Created,
+        }
+    );
+    assert_eq!(payment, before);
+}
+
+#[test]
+fn authorize_after_authorization_is_rejected_and_state_is_unchanged() {
+    let mut payment = payment();
+    payment.authorize().expect("created payment can authorize");
+    let before = payment.clone();
+
+    let error = payment
+        .authorize()
+        .expect_err("authorized payment cannot be authorized again");
+
+    assert_eq!(
+        error,
+        PaymentTransitionError::InvalidTransition {
+            operation: PaymentOperation::Authorize,
+            current_status: PaymentStatus::Authorized,
+        }
+    );
+    assert_eq!(payment, before);
+}
+
+#[test]
+fn cancel_after_authorization_is_rejected_and_state_is_unchanged() {
+    let mut payment = payment();
+    payment.authorize().expect("created payment can authorize");
+    let before = payment.clone();
+
+    let error = payment
+        .cancel()
+        .expect_err("authorized payment cannot be cancelled");
+
+    assert_eq!(
+        error,
+        PaymentTransitionError::InvalidTransition {
+            operation: PaymentOperation::Cancel,
+            current_status: PaymentStatus::Authorized,
+        }
+    );
+    assert_eq!(payment, before);
+}
+
+#[test]
 fn authorize_after_cancellation_is_rejected_and_state_is_unchanged() {
     let mut payment = payment();
     payment.cancel().expect("created payment can cancel");
