@@ -28,3 +28,7 @@ assert_eq!(payment.status(), PaymentStatus::Authorized);
 
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).

@@ -2,6 +2,11 @@
 name = "paykit-domain"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.87"
+description = "Payment workflow domain types and checked lifecycle transitions"
+repository = "https://github.com/Prem-Tomar/paykit-domain"
+readme = "README.md"
+license = "Apache-2.0"
 
 [dependencies]
-paykit-money = { path = "../paykit-money" }
+paykit-money = { version = "0.1.0", path = "../paykit-money" }
