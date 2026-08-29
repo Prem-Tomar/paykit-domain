@@ -196,6 +196,13 @@ fn is_allowed_transition(operation: PaymentOperation, current_status: PaymentSta
     )
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PaymentTransition {
+    previous_status: PaymentStatus,
+    new_status: PaymentStatus,
+    operation: PaymentOperation,
+}
+
 /// An error returned when a payment lifecycle transition is rejected.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PaymentTransitionError {
