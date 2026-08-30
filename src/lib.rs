@@ -131,71 +131,95 @@ impl Payment {
 
     /// Records that the payment has been authorized.
     ///
+    /// On success, returns evidence describing the transition from [`PaymentStatus::Created`]
+    /// to [`PaymentStatus::Authorized`].
+    ///
     /// # Errors
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// created.
-    pub fn authorize(&mut self) -> Result<(), PaymentTransitionError> {
-        self.transition(PaymentOperation::Authorize, PaymentStatus::Authorized)
+    pub fn authorize(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
+        self.transition(PaymentOperation::Authorize)
     }
 
     /// Records that the authorized payment has been captured.
     ///
+    /// On success, returns evidence describing the transition from [`PaymentStatus::Authorized`]
+    /// to [`PaymentStatus::Captured`].
+    ///
     /// # Errors
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// authorized.
-    pub fn capture(&mut self) -> Result<(), PaymentTransitionError> {
-        self.transition(PaymentOperation::Capture, PaymentStatus::Captured)
+    pub fn capture(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
+        self.transition(PaymentOperation::Capture)
     }
 
     /// Records that the created payment has been cancelled.
+    ///
+    /// On success, returns evidence describing the transition from [`PaymentStatus::Created`]
+    /// to [`PaymentStatus::Cancelled`].
     ///
     /// # Errors
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// created.
-    pub fn cancel(&mut self) -> Result<(), PaymentTransitionError> {
-        self.transition(PaymentOperation::Cancel, PaymentStatus::Cancelled)
+    pub fn cancel(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
+        self.transition(PaymentOperation::Cancel)
     }
 
     /// Records that the authorized payment has been voided.
+    ///
+    /// On success, returns evidence describing the transition from [`PaymentStatus::Authorized`]
+    /// to [`PaymentStatus::Voided`].
     ///
     /// # Errors
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// authorized.
-    pub fn void(&mut self) -> Result<(), PaymentTransitionError> {
-        self.transition(PaymentOperation::Void, PaymentStatus::Voided)
+    pub fn void(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
+        self.transition(PaymentOperation::Void)
     }
 
     fn transition(
         &mut self,
         operation: PaymentOperation,
-        next_status: PaymentStatus,
-    ) -> Result<(), PaymentTransitionError> {
-        if is_allowed_transition(operation, self.status) {
-            self.status = next_status;
-            return Ok(());
-        }
+    ) -> Result<PaymentTransition, PaymentTransitionError> {
+        let previous_status = self.status;
+        let Some(new_status) = next_status(operation, previous_status) else {
+            return Err(PaymentTransitionError::InvalidTransition {
+                operation,
+                current_status: previous_status,
+            });
+        };
 
-        Err(PaymentTransitionError::InvalidTransition {
+        self.status = new_status;
+        Ok(PaymentTransition {
+            previous_status,
+            new_status,
             operation,
-            current_status: self.status,
         })
     }
 }
 
-fn is_allowed_transition(operation: PaymentOperation, current_status: PaymentStatus) -> bool {
-    matches!(
-        (operation, current_status),
-        (PaymentOperation::Authorize, PaymentStatus::Created)
-            | (PaymentOperation::Cancel, PaymentStatus::Created)
-            | (PaymentOperation::Capture, PaymentStatus::Authorized)
-            | (PaymentOperation::Void, PaymentStatus::Authorized)
-    )
+fn next_status(
+    operation: PaymentOperation,
+    current_status: PaymentStatus,
+) -> Option<PaymentStatus> {
+    match (operation, current_status) {
+        (PaymentOperation::Authorize, PaymentStatus::Created) => Some(PaymentStatus::Authorized),
+        (PaymentOperation::Cancel, PaymentStatus::Created) => Some(PaymentStatus::Cancelled),
+        (PaymentOperation::Capture, PaymentStatus::Authorized) => Some(PaymentStatus::Captured),
+        (PaymentOperation::Void, PaymentStatus::Authorized) => Some(PaymentStatus::Voided),
+        _ => None,
+    }
 }
 
+/// Evidence that a payment lifecycle transition completed successfully.
+///
+/// This value records the applied operation and the payment statuses immediately before and after
+/// the in-memory state change. It does not represent processor confirmation, persistence, or a
+/// durable domain event.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaymentTransition {
     previous_status: PaymentStatus,
@@ -230,3 +254,91 @@ impl fmt::Display for PaymentTransitionError {
 }
 
 impl std::error::Error for PaymentTransitionError {}
+
+#[cfg(test)]
+mod tests {
+    use paykit_money::{Currency, Money};
+
+    use super::*;
+
+    fn payment() -> Payment {
+        let currency = Currency::new("USD", 2).expect("test currency should be valid");
+        let amount = PaymentAmount::new(Money::from_minor_units(1_000, currency))
+            .expect("test amount should be positive");
+
+        Payment::new(
+            PaymentId::new("pay_transition").expect("test id should be valid"),
+            amount,
+        )
+    }
+
+    #[test]
+    fn authorization_returns_exact_transition_evidence() {
+        let mut payment = payment();
+
+        let transition = payment.authorize().expect("created payment can authorize");
+
+        assert_eq!(
+            transition,
+            PaymentTransition {
+                previous_status: PaymentStatus::Created,
+                new_status: PaymentStatus::Authorized,
+                operation: PaymentOperation::Authorize,
+            }
+        );
+        assert_eq!(payment.status(), PaymentStatus::Authorized);
+    }
+
+    #[test]
+    fn cancellation_returns_exact_transition_evidence() {
+        let mut payment = payment();
+
+        let transition = payment.cancel().expect("created payment can cancel");
+
+        assert_eq!(
+            transition,
+            PaymentTransition {
+                previous_status: PaymentStatus::Created,
+                new_status: PaymentStatus::Cancelled,
+                operation: PaymentOperation::Cancel,
+            }
+        );
+        assert_eq!(payment.status(), PaymentStatus::Cancelled);
+    }
+
+    #[test]
+    fn capture_returns_exact_transition_evidence() {
+        let mut payment = payment();
+        payment.authorize().expect("created payment can authorize");
+
+        let transition = payment.capture().expect("authorized payment can capture");
+
+        assert_eq!(
+            transition,
+            PaymentTransition {
+                previous_status: PaymentStatus::Authorized,
+                new_status: PaymentStatus::Captured,
+                operation: PaymentOperation::Capture,
+            }
+        );
+        assert_eq!(payment.status(), PaymentStatus::Captured);
+    }
+
+    #[test]
+    fn void_returns_exact_transition_evidence() {
+        let mut payment = payment();
+        payment.authorize().expect("created payment can authorize");
+
+        let transition = payment.void().expect("authorized payment can void");
+
+        assert_eq!(
+            transition,
+            PaymentTransition {
+                previous_status: PaymentStatus::Authorized,
+                new_status: PaymentStatus::Voided,
+                operation: PaymentOperation::Void,
+            }
+        );
+        assert_eq!(payment.status(), PaymentStatus::Voided);
+    }
+}

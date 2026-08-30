@@ -10,8 +10,13 @@ transport, persistence, processor adapters, ledger posting, or network behavior.
 - `PaymentId`
 - `PaymentStatus`
 - `PaymentOperation`
+- `PaymentTransition`
 - `Payment`
 - checked authorization, capture, cancellation, and void transitions
+
+Successful lifecycle operations return `PaymentTransition`, which records the applied operation
+and the statuses immediately before and after the in-memory state change. It is transition
+evidence, not processor confirmation or a durable event.
 
 ```rust
 use paykit_domain::{Payment, PaymentId, PaymentStatus};
@@ -23,7 +28,7 @@ let id = PaymentId::new("pay_001")?;
 let mut payment = Payment::new(id, amount);
 
 assert_eq!(payment.status(), PaymentStatus::Created);
-payment.authorize()?;
+let _transition = payment.authorize()?;
 assert_eq!(payment.status(), PaymentStatus::Authorized);
 
 # Ok::<(), Box<dyn std::error::Error>>(())
