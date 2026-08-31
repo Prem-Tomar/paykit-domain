@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Checked lifecycle operations with typed invalid-transition errors.
 - Successful lifecycle transition evidence containing the operation and previous and resulting
   statuses.
+- Read-only query helpers for inspecting payment transition evidence.
 - Payment values that preserve validated amounts from `paykit-money`.
 - Regression coverage for construction, valid transitions, terminal states, error reporting, and
   custom currencies.

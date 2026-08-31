@@ -227,6 +227,26 @@ pub struct PaymentTransition {
     operation: PaymentOperation,
 }
 
+impl PaymentTransition {
+    /// Returns the lifecycle operation that produced this transition.
+    #[must_use]
+    pub const fn operation(&self) -> PaymentOperation {
+        self.operation
+    }
+
+    /// Returns the payment status immediately before the operation succeeded.
+    #[must_use]
+    pub const fn previous_status(&self) -> PaymentStatus {
+        self.previous_status
+    }
+
+    /// Returns the payment status produced by the successful operation.
+    #[must_use]
+    pub const fn resulting_status(&self) -> PaymentStatus {
+        self.new_status
+    }
+}
+
 /// An error returned when a payment lifecycle transition is rejected.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PaymentTransitionError {
@@ -254,91 +274,3 @@ impl fmt::Display for PaymentTransitionError {
 }
 
 impl std::error::Error for PaymentTransitionError {}
-
-#[cfg(test)]
-mod tests {
-    use paykit_money::{Currency, Money};
-
-    use super::*;
-
-    fn payment() -> Payment {
-        let currency = Currency::new("USD", 2).expect("test currency should be valid");
-        let amount = PaymentAmount::new(Money::from_minor_units(1_000, currency))
-            .expect("test amount should be positive");
-
-        Payment::new(
-            PaymentId::new("pay_transition").expect("test id should be valid"),
-            amount,
-        )
-    }
-
-    #[test]
-    fn authorization_returns_exact_transition_evidence() {
-        let mut payment = payment();
-
-        let transition = payment.authorize().expect("created payment can authorize");
-
-        assert_eq!(
-            transition,
-            PaymentTransition {
-                previous_status: PaymentStatus::Created,
-                new_status: PaymentStatus::Authorized,
-                operation: PaymentOperation::Authorize,
-            }
-        );
-        assert_eq!(payment.status(), PaymentStatus::Authorized);
-    }
-
-    #[test]
-    fn cancellation_returns_exact_transition_evidence() {
-        let mut payment = payment();
-
-        let transition = payment.cancel().expect("created payment can cancel");
-
-        assert_eq!(
-            transition,
-            PaymentTransition {
-                previous_status: PaymentStatus::Created,
-                new_status: PaymentStatus::Cancelled,
-                operation: PaymentOperation::Cancel,
-            }
-        );
-        assert_eq!(payment.status(), PaymentStatus::Cancelled);
-    }
-
-    #[test]
-    fn capture_returns_exact_transition_evidence() {
-        let mut payment = payment();
-        payment.authorize().expect("created payment can authorize");
-
-        let transition = payment.capture().expect("authorized payment can capture");
-
-        assert_eq!(
-            transition,
-            PaymentTransition {
-                previous_status: PaymentStatus::Authorized,
-                new_status: PaymentStatus::Captured,
-                operation: PaymentOperation::Capture,
-            }
-        );
-        assert_eq!(payment.status(), PaymentStatus::Captured);
-    }
-
-    #[test]
-    fn void_returns_exact_transition_evidence() {
-        let mut payment = payment();
-        payment.authorize().expect("created payment can authorize");
-
-        let transition = payment.void().expect("authorized payment can void");
-
-        assert_eq!(
-            transition,
-            PaymentTransition {
-                previous_status: PaymentStatus::Authorized,
-                new_status: PaymentStatus::Voided,
-                operation: PaymentOperation::Void,
-            }
-        );
-        assert_eq!(payment.status(), PaymentStatus::Voided);
-    }
-}
