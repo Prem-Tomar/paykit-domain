@@ -8,5 +8,11 @@ repository = "https://github.com/Prem-Tomar/paykit-domain"
 readme = "README.md"
 license = "Apache-2.0"
 
+
+[features]
+default = []
+serde = ["dep:serde"]
+
 [dependencies]
 paykit-money = { version = "0.1.0", path = "../paykit-money" }
+serde = { version = "1.0.229", features = ["derive"], optional = true }
