@@ -1,5 +1,5 @@
 use paykit_domain::{
-    Payment, PaymentId, PaymentIdError, PaymentOperation, PaymentStatus, PaymentTransitionError,
+    Payment, PaymentAction, PaymentId, PaymentIdError, PaymentStatus, PaymentTransitionError,
 };
 use paykit_money::{Currency, Money, PaymentAmount};
 
@@ -105,7 +105,7 @@ fn capture_before_authorization_is_rejected_and_state_is_unchanged() {
     assert_eq!(
         error,
         PaymentTransitionError::InvalidTransition {
-            operation: PaymentOperation::Capture,
+            operation: PaymentAction::Capture,
             current_status: PaymentStatus::Created,
         }
     );
@@ -124,7 +124,7 @@ fn void_before_authorization_is_rejected_and_state_is_unchanged() {
     assert_eq!(
         error,
         PaymentTransitionError::InvalidTransition {
-            operation: PaymentOperation::Void,
+            operation: PaymentAction::Void,
             current_status: PaymentStatus::Created,
         }
     );
@@ -144,7 +144,7 @@ fn authorize_after_authorization_is_rejected_and_state_is_unchanged() {
     assert_eq!(
         error,
         PaymentTransitionError::InvalidTransition {
-            operation: PaymentOperation::Authorize,
+            operation: PaymentAction::Authorize,
             current_status: PaymentStatus::Authorized,
         }
     );
@@ -164,7 +164,7 @@ fn cancel_after_authorization_is_rejected_and_state_is_unchanged() {
     assert_eq!(
         error,
         PaymentTransitionError::InvalidTransition {
-            operation: PaymentOperation::Cancel,
+            operation: PaymentAction::Cancel,
             current_status: PaymentStatus::Authorized,
         }
     );
@@ -184,7 +184,7 @@ fn authorize_after_cancellation_is_rejected_and_state_is_unchanged() {
     assert_eq!(
         error,
         PaymentTransitionError::InvalidTransition {
-            operation: PaymentOperation::Authorize,
+            operation: PaymentAction::Authorize,
             current_status: PaymentStatus::Cancelled,
         }
     );
@@ -192,7 +192,7 @@ fn authorize_after_cancellation_is_rejected_and_state_is_unchanged() {
 }
 
 #[test]
-fn terminal_statuses_reject_every_operation_and_keep_state_unchanged() {
+fn terminal_statuses_reject_every_action_and_keep_state_unchanged() {
     let terminal_builders: [fn() -> Payment; 3] = [
         || {
             let mut payment = payment();
@@ -214,28 +214,28 @@ fn terminal_statuses_reject_every_operation_and_keep_state_unchanged() {
     ];
 
     for build_terminal_payment in terminal_builders {
-        for operation in [
-            PaymentOperation::Authorize,
-            PaymentOperation::Capture,
-            PaymentOperation::Cancel,
-            PaymentOperation::Void,
+        for action in [
+            PaymentAction::Authorize,
+            PaymentAction::Capture,
+            PaymentAction::Cancel,
+            PaymentAction::Void,
         ] {
             let mut payment = build_terminal_payment();
             let before = payment.clone();
             let current_status = payment.status();
 
-            let error = match operation {
-                PaymentOperation::Authorize => payment.authorize(),
-                PaymentOperation::Capture => payment.capture(),
-                PaymentOperation::Cancel => payment.cancel(),
-                PaymentOperation::Void => payment.void(),
+            let error = match action {
+                PaymentAction::Authorize => payment.authorize(),
+                PaymentAction::Capture => payment.capture(),
+                PaymentAction::Cancel => payment.cancel(),
+                PaymentAction::Void => payment.void(),
             }
-            .expect_err("terminal payment should reject every operation");
+            .expect_err("terminal payment should reject every action");
 
             assert_eq!(
                 error,
                 PaymentTransitionError::InvalidTransition {
-                    operation,
+                    operation: action,
                     current_status,
                 }
             );
@@ -277,7 +277,7 @@ fn displays_payment_id_errors_stably() {
 #[test]
 fn displays_transition_errors_stably() {
     let error = PaymentTransitionError::InvalidTransition {
-        operation: PaymentOperation::Capture,
+        operation: PaymentAction::Capture,
         current_status: PaymentStatus::Created,
     };
 

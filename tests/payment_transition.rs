@@ -1,4 +1,4 @@
-use paykit_domain::{Payment, PaymentId, PaymentOperation, PaymentStatus};
+use paykit_domain::{Payment, PaymentAction, PaymentId, PaymentStatus};
 use paykit_money::{Currency, Money, PaymentAmount};
 
 fn payment() -> Payment {
@@ -7,57 +7,57 @@ fn payment() -> Payment {
         .expect("test amount should be positive");
 
     Payment::new(
-        PaymentId::new("pay_transition").expect("test id should be valid"),
+        PaymentId::new("pay_action_result").expect("test id should be valid"),
         amount,
     )
 }
 
 #[test]
-fn authorization_returns_exact_transition_evidence() {
+fn authorization_returns_exact_action_result() {
     let mut payment = payment();
 
-    let transition = payment.authorize().expect("created payment can authorize");
+    let result = payment.authorize().expect("created payment can authorize");
 
-    assert_eq!(transition.operation(), PaymentOperation::Authorize);
-    assert_eq!(transition.previous_status(), PaymentStatus::Created);
-    assert_eq!(transition.resulting_status(), PaymentStatus::Authorized);
+    assert_eq!(result.action(), PaymentAction::Authorize);
+    assert_eq!(result.previous_status(), PaymentStatus::Created);
+    assert_eq!(result.resulting_status(), PaymentStatus::Authorized);
     assert_eq!(payment.status(), PaymentStatus::Authorized);
 }
 
 #[test]
-fn cancellation_returns_exact_transition_evidence() {
+fn cancellation_returns_exact_action_result() {
     let mut payment = payment();
 
-    let transition = payment.cancel().expect("created payment can cancel");
+    let result = payment.cancel().expect("created payment can cancel");
 
-    assert_eq!(transition.operation(), PaymentOperation::Cancel);
-    assert_eq!(transition.previous_status(), PaymentStatus::Created);
-    assert_eq!(transition.resulting_status(), PaymentStatus::Cancelled);
+    assert_eq!(result.action(), PaymentAction::Cancel);
+    assert_eq!(result.previous_status(), PaymentStatus::Created);
+    assert_eq!(result.resulting_status(), PaymentStatus::Cancelled);
     assert_eq!(payment.status(), PaymentStatus::Cancelled);
 }
 
 #[test]
-fn capture_returns_exact_transition_evidence() {
+fn capture_returns_exact_action_result() {
     let mut payment = payment();
     payment.authorize().expect("created payment can authorize");
 
-    let transition = payment.capture().expect("authorized payment can capture");
+    let result = payment.capture().expect("authorized payment can capture");
 
-    assert_eq!(transition.operation(), PaymentOperation::Capture);
-    assert_eq!(transition.previous_status(), PaymentStatus::Authorized);
-    assert_eq!(transition.resulting_status(), PaymentStatus::Captured);
+    assert_eq!(result.action(), PaymentAction::Capture);
+    assert_eq!(result.previous_status(), PaymentStatus::Authorized);
+    assert_eq!(result.resulting_status(), PaymentStatus::Captured);
     assert_eq!(payment.status(), PaymentStatus::Captured);
 }
 
 #[test]
-fn void_returns_exact_transition_evidence() {
+fn void_returns_exact_action_result() {
     let mut payment = payment();
     payment.authorize().expect("created payment can authorize");
 
-    let transition = payment.void().expect("authorized payment can void");
+    let result = payment.void().expect("authorized payment can void");
 
-    assert_eq!(transition.operation(), PaymentOperation::Void);
-    assert_eq!(transition.previous_status(), PaymentStatus::Authorized);
-    assert_eq!(transition.resulting_status(), PaymentStatus::Voided);
+    assert_eq!(result.action(), PaymentAction::Void);
+    assert_eq!(result.previous_status(), PaymentStatus::Authorized);
+    assert_eq!(result.resulting_status(), PaymentStatus::Voided);
     assert_eq!(payment.status(), PaymentStatus::Voided);
 }

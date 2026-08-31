@@ -79,9 +79,9 @@ pub enum PaymentStatus {
     Voided,
 }
 
-/// A lifecycle operation attempted against a payment.
+/// A lifecycle action attempted against a payment.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum PaymentOperation {
+pub enum PaymentAction {
     /// Move a created payment to authorized.
     Authorize,
     /// Move an authorized payment to captured.
@@ -138,8 +138,8 @@ impl Payment {
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// created.
-    pub fn authorize(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
-        self.transition(PaymentOperation::Authorize)
+    pub fn authorize(&mut self) -> Result<PaymentActionResult, PaymentTransitionError> {
+        self.transition(PaymentAction::Authorize)
     }
 
     /// Records that the authorized payment has been captured.
@@ -151,8 +151,8 @@ impl Payment {
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// authorized.
-    pub fn capture(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
-        self.transition(PaymentOperation::Capture)
+    pub fn capture(&mut self) -> Result<PaymentActionResult, PaymentTransitionError> {
+        self.transition(PaymentAction::Capture)
     }
 
     /// Records that the created payment has been cancelled.
@@ -164,8 +164,8 @@ impl Payment {
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// created.
-    pub fn cancel(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
-        self.transition(PaymentOperation::Cancel)
+    pub fn cancel(&mut self) -> Result<PaymentActionResult, PaymentTransitionError> {
+        self.transition(PaymentAction::Cancel)
     }
 
     /// Records that the authorized payment has been voided.
@@ -177,14 +177,14 @@ impl Payment {
     ///
     /// Returns [`PaymentTransitionError::InvalidTransition`] when the payment is not currently
     /// authorized.
-    pub fn void(&mut self) -> Result<PaymentTransition, PaymentTransitionError> {
-        self.transition(PaymentOperation::Void)
+    pub fn void(&mut self) -> Result<PaymentActionResult, PaymentTransitionError> {
+        self.transition(PaymentAction::Void)
     }
 
     fn transition(
         &mut self,
-        operation: PaymentOperation,
-    ) -> Result<PaymentTransition, PaymentTransitionError> {
+        operation: PaymentAction,
+    ) -> Result<PaymentActionResult, PaymentTransitionError> {
         let previous_status = self.status;
         let Some(new_status) = next_status(operation, previous_status) else {
             return Err(PaymentTransitionError::InvalidTransition {
@@ -194,7 +194,7 @@ impl Payment {
         };
 
         self.status = new_status;
-        Ok(PaymentTransition {
+        Ok(PaymentActionResult {
             previous_status,
             new_status,
             operation,
@@ -202,45 +202,42 @@ impl Payment {
     }
 }
 
-fn next_status(
-    operation: PaymentOperation,
-    current_status: PaymentStatus,
-) -> Option<PaymentStatus> {
+fn next_status(operation: PaymentAction, current_status: PaymentStatus) -> Option<PaymentStatus> {
     match (operation, current_status) {
-        (PaymentOperation::Authorize, PaymentStatus::Created) => Some(PaymentStatus::Authorized),
-        (PaymentOperation::Cancel, PaymentStatus::Created) => Some(PaymentStatus::Cancelled),
-        (PaymentOperation::Capture, PaymentStatus::Authorized) => Some(PaymentStatus::Captured),
-        (PaymentOperation::Void, PaymentStatus::Authorized) => Some(PaymentStatus::Voided),
+        (PaymentAction::Authorize, PaymentStatus::Created) => Some(PaymentStatus::Authorized),
+        (PaymentAction::Cancel, PaymentStatus::Created) => Some(PaymentStatus::Cancelled),
+        (PaymentAction::Capture, PaymentStatus::Authorized) => Some(PaymentStatus::Captured),
+        (PaymentAction::Void, PaymentStatus::Authorized) => Some(PaymentStatus::Voided),
         _ => None,
     }
 }
 
 /// Evidence that a payment lifecycle transition completed successfully.
 ///
-/// This value records the applied operation and the payment statuses immediately before and after
+/// This value records the applied action and the payment statuses immediately before and after
 /// the in-memory state change. It does not represent processor confirmation, persistence, or a
 /// durable domain event.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PaymentTransition {
+pub struct PaymentActionResult {
     previous_status: PaymentStatus,
     new_status: PaymentStatus,
-    operation: PaymentOperation,
+    operation: PaymentAction,
 }
 
-impl PaymentTransition {
-    /// Returns the lifecycle operation that produced this transition.
+impl PaymentActionResult {
+    /// Returns the lifecycle action that produced this result.
     #[must_use]
-    pub const fn operation(&self) -> PaymentOperation {
+    pub const fn action(&self) -> PaymentAction {
         self.operation
     }
 
-    /// Returns the payment status immediately before the operation succeeded.
+    /// Returns the payment status immediately before the action succeeded.
     #[must_use]
     pub const fn previous_status(&self) -> PaymentStatus {
         self.previous_status
     }
 
-    /// Returns the payment status produced by the successful operation.
+    /// Returns the payment status produced by the successful action.
     #[must_use]
     pub const fn resulting_status(&self) -> PaymentStatus {
         self.new_status
@@ -250,11 +247,11 @@ impl PaymentTransition {
 /// An error returned when a payment lifecycle transition is rejected.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PaymentTransitionError {
-    /// The attempted operation is not valid for the payment's current status.
+    /// The attempted action is not valid for the payment's current status.
     InvalidTransition {
-        /// The operation the caller attempted to record.
-        operation: PaymentOperation,
-        /// The status the payment had when the operation was attempted.
+        /// The action the caller attempted to record.
+        operation: PaymentAction,
+        /// The status the payment had when the action was attempted.
         current_status: PaymentStatus,
     },
 }
