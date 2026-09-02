@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
   from its successful in-memory transition evidence.
 - Successful lifecycle action results containing the action and previous and resulting statuses.
 - Read-only query helpers for inspecting payment action results.
+- Payment method categories attached to payments and exposed through a read-only query helper.
 - Payment values that preserve validated amounts from `paykit-money`.
 - Regression coverage for construction, valid transitions, terminal states, error reporting, and
   custom currencies.

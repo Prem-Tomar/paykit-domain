@@ -1,5 +1,6 @@
 use paykit_domain::{
-    Payment, PaymentAction, PaymentId, PaymentIdError, PaymentStatus, PaymentTransitionError,
+    Payment, PaymentAction, PaymentId, PaymentIdError, PaymentMethodType, PaymentStatus,
+    PaymentTransitionError,
 };
 use paykit_money::{Currency, Money, PaymentAmount};
 
@@ -16,6 +17,7 @@ fn payment() -> Payment {
     Payment::new(
         PaymentId::new("pay_001").expect("test id should be valid"),
         payment_amount(1_000),
+        PaymentMethodType::Card,
     )
 }
 
@@ -47,12 +49,14 @@ fn payment_id_rejects_leading_or_trailing_whitespace() {
 fn new_payment_starts_created_and_preserves_inputs() {
     let id = PaymentId::new("pay_001").expect("id should be valid");
     let amount = payment_amount(1_000);
+    let payment_method = PaymentMethodType::Upi;
 
-    let payment = Payment::new(id.clone(), amount.clone());
+    let payment = Payment::new(id.clone(), amount.clone(), payment_method);
 
     assert_eq!(payment.id(), &id);
     assert_eq!(payment.amount(), &amount);
     assert_eq!(payment.status(), PaymentStatus::Created);
+    assert_eq!(payment.payment_method(), payment_method);
 }
 
 #[test]
@@ -252,6 +256,7 @@ fn custom_currency_amount_is_preserved_through_successful_transitions() {
     let mut payment = Payment::new(
         PaymentId::new("pay_custom").expect("id should be valid"),
         amount,
+        PaymentMethodType::BankTransfer,
     );
 
     payment.authorize().expect("created payment can authorize");
@@ -260,6 +265,7 @@ fn custom_currency_amount_is_preserved_through_successful_transitions() {
     assert_eq!(payment.amount().money().minor_units(), 12_345);
     assert_eq!(payment.amount().money().currency(), &currency);
     assert_eq!(payment.status(), PaymentStatus::Voided);
+    assert_eq!(payment.payment_method(), PaymentMethodType::BankTransfer);
 }
 
 #[test]

@@ -11,6 +11,7 @@ transport, persistence, processor adapters, ledger posting, or network behavior.
 - `PaymentStatus`
 - `PaymentAction`
 - `PaymentActionResult`
+- `PaymentMethodType`
 - `Payment`
 - checked authorization, capture, cancellation, and void transitions
 
@@ -20,15 +21,16 @@ the statuses immediately before and after the in-memory state change. The result
 evidence, not processor confirmation or a durable event.
 
 ```rust
-use paykit_domain::{Payment, PaymentAction, PaymentId, PaymentStatus};
+use paykit_domain::{Payment, PaymentAction, PaymentId, PaymentMethodType, PaymentStatus};
 use paykit_money::{Currency, Money, PaymentAmount};
 
 let usd = Currency::new("USD", 2)?;
 let amount = PaymentAmount::new(Money::from_minor_units(1_000, usd))?;
 let id = PaymentId::new("pay_001")?;
-let mut payment = Payment::new(id, amount);
+let mut payment = Payment::new(id, amount, PaymentMethodType::Card);
 
 assert_eq!(payment.status(), PaymentStatus::Created);
+assert_eq!(payment.payment_method(), PaymentMethodType::Card);
 let result = payment.authorize()?;
 assert_eq!(result.action(), PaymentAction::Authorize);
 assert_eq!(result.previous_status(), PaymentStatus::Created);

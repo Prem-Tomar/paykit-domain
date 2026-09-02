@@ -1,4 +1,4 @@
-use paykit_domain::{Payment, PaymentAction, PaymentId, PaymentStatus};
+use paykit_domain::{Payment, PaymentAction, PaymentId, PaymentMethodType, PaymentStatus};
 use paykit_money::{Currency, Money, PaymentAmount};
 
 fn payment() -> Payment {
@@ -9,6 +9,7 @@ fn payment() -> Payment {
     Payment::new(
         PaymentId::new("pay_action_result").expect("test id should be valid"),
         amount,
+        PaymentMethodType::Card,
     )
 }
 

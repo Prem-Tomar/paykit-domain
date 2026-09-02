@@ -77,6 +77,7 @@ impl Payment {
         self.status
     }
 
+    /// Returns the payment method category attached to this payment.
     #[must_use]
     pub const fn payment_method(&self) -> PaymentMethodType {
         self.payment_method
