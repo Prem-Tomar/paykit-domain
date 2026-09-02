@@ -11,7 +11,7 @@ mod payment;
 
 pub use paykit_money::PaymentAmount;
 pub use payment::{
-    Payment, PaymentAction, PaymentActionResult, PaymentAmountPolicy, PaymentCurrencyPolicy,
-    PaymentId, PaymentIdError, PaymentMethodPolicy, PaymentMethodType, PaymentStatus,
-    PaymentTransitionError,
+    Payment, PaymentAction, PaymentActionResult, PaymentAmountPolicy,
+    PaymentCreationPolicyRejection, PaymentCreationPolicySet, PaymentCurrencyPolicy, PaymentId,
+    PaymentIdError, PaymentMethodPolicy, PaymentMethodType, PaymentStatus, PaymentTransitionError,
 };
