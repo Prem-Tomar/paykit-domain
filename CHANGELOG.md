@@ -15,11 +15,14 @@ All notable changes to this project will be documented in this file.
 - Read-only query helpers for inspecting payment action results.
 - Payment method categories attached to payments and exposed through a read-only query helper.
 - Caller-owned payment amount policy boundary with typed rejection support.
+- Caller-owned accepted-currency policy boundary with typed rejection support.
 - Payment values that preserve validated amounts from `paykit-money`.
 - Regression coverage for construction, valid transitions, terminal states, error reporting, and
   custom currencies.
 - Integration coverage for external amount policies accepting and rejecting borrowed payment
   amounts.
+- Integration coverage for external currency policies accepting and rejecting borrowed currency
+  definitions.
 - Cargo package metadata, a versioned local `paykit-money` dependency contract, and Apache
   License 2.0 licensing.
 
