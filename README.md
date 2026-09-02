@@ -14,6 +14,7 @@ transport, persistence, processor adapters, ledger posting, or network behavior.
 - `PaymentMethodType`
 - `PaymentAmountPolicy`
 - `PaymentCurrencyPolicy`
+- `PaymentMethodPolicy`
 - `Payment`
 - checked authorization, capture, cancellation, and void transitions
 
@@ -29,6 +30,9 @@ caller also owns the rejection type.
 `PaymentCurrencyPolicy` does the same for accepted-currency rules while preserving
 `paykit-money`'s open currency model. A caller can accept `USD` and reject another structurally
 valid currency without making this crate maintain a supported-currency list.
+
+`PaymentMethodPolicy` lets callers accept or reject the crate's payment-method categories without
+embedding merchant or workflow configuration in `PaymentMethodType`.
 
 ```rust
 use paykit_domain::PaymentAmountPolicy;
