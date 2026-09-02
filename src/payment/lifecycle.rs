@@ -2,6 +2,8 @@ use std::fmt;
 
 use paykit_money::PaymentAmount;
 
+use crate::PaymentMethodType;
+
 use super::id::PaymentId;
 
 /// The controlled lifecycle status of a payment.
@@ -38,16 +40,22 @@ pub struct Payment {
     id: PaymentId,
     amount: PaymentAmount,
     status: PaymentStatus,
+    payment_method: PaymentMethodType,
 }
 
 impl Payment {
     /// Creates a payment in [`PaymentStatus::Created`].
     #[must_use]
-    pub const fn new(id: PaymentId, amount: PaymentAmount) -> Self {
+    pub const fn new(
+        id: PaymentId,
+        amount: PaymentAmount,
+        payment_method: PaymentMethodType,
+    ) -> Self {
         Self {
             id,
             amount,
             status: PaymentStatus::Created,
+            payment_method,
         }
     }
 
@@ -67,6 +75,11 @@ impl Payment {
     #[must_use]
     pub const fn status(&self) -> PaymentStatus {
         self.status
+    }
+
+    #[must_use]
+    pub const fn payment_method(&self) -> PaymentMethodType {
+        self.payment_method
     }
 
     /// Records that the payment has been authorized.

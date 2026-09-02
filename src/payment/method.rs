@@ -1,5 +1,5 @@
 /// The payment method category attached to a payment workflow.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
 pub enum PaymentMethodType {
     /// A payment funded by a card.
     Card,
