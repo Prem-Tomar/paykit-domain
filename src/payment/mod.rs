@@ -14,4 +14,6 @@ pub use lifecycle::{
 };
 pub use method::PaymentMethodType;
 pub use method_policy::PaymentMethodPolicy;
-pub use payment_creation_policy::{PaymentCreationPolicyRejection, PaymentCreationPolicySet};
+pub use payment_creation_policy::{
+    PaymentCreationPolicyRejection, PaymentCreationPolicySet, PaymentCreationPolicyValidationResult,
+};
